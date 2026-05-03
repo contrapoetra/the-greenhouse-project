@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    public float walkSpeed = 5f;
+    public float walkSpeed = 6.5f;
     public float runSpeed = 9f;
     public float mouseSensitivity = 100f;
     public Transform cameraPivot;
