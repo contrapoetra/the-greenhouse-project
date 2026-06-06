@@ -92,6 +92,13 @@ public class EnvironmentHUD : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.H))
             ToggleHUD();
 
+        // Progress growth with G key (Debug)
+        if (Input.GetKeyDown(KeyCode.G))
+        {
+            if (PlantManager.Instance != null)
+                PlantManager.Instance.GrowAllPlants();
+        }
+
         // Update berkala (tidak perlu tiap frame)
         _updateTimer -= Time.deltaTime;
         if (_updateTimer <= 0f)
@@ -104,6 +111,12 @@ public class EnvironmentHUD : MonoBehaviour
     // ─────────────────────────────────────────────
     // CORE UPDATE
     // ─────────────────────────────────────────────
+
+    public void OnGrowButtonPressed()
+    {
+        if (PlantManager.Instance != null)
+            PlantManager.Instance.GrowAllPlants();
+    }
 
     void UpdateHUD()
     {

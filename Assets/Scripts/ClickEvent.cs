@@ -20,6 +20,32 @@ public class ClickEvent : MonoBehaviour
 
     void Update()
     {
+        // --- TIE UP LOGIC (No click required) ---
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            Debug.Log("T key pressed");
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit, range))
+            {
+                Debug.Log("T hit: " + hit.collider.name);
+                PlantGrowth plant = hit.collider.GetComponentInParent<PlantGrowth>();
+                if (plant != null)
+                {
+                    Debug.Log("Found PlantGrowth component, calling TieUp()");
+                    plant.TieUp();
+                }
+                else
+                {
+                    Debug.Log("No PlantGrowth component found in parent of " + hit.collider.name);
+                }
+            }
+            else
+            {
+                Debug.Log("T raycast hit nothing");
+            }
+        }
+
         // 🖱️ LEFT CLICK = interact
         if (Input.GetMouseButtonDown(0))
         {
@@ -53,11 +79,9 @@ public class ClickEvent : MonoBehaviour
                     }
                 }
 
-                // ❌ NO MORE dropping here
                 return;
             }
 
-            // Not holding anything → normal interaction
             if (didHit)
             {
                 CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
@@ -79,7 +103,6 @@ public class ClickEvent : MonoBehaviour
             }
         }
 
-        // 🖱️ RIGHT CLICK = drop
         if (Input.GetMouseButtonDown(1))
         {
             if (heldObject != null)
@@ -115,9 +138,10 @@ public class ClickEvent : MonoBehaviour
     {
         if (heldUses <= 0) return;
 
+        // Random rotation around the Y axis (upright), 0 on X and Z
         Quaternion randomRot = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
 
-        GameObject plant = Instantiate(plantPrefab, position + Vector3.up * 0.1f, randomRot);
+        GameObject plant = Instantiate(plantPrefab, position, randomRot);
 
         // ❌ remove pickup
         foreach (CustomProperties p in plant.GetComponentsInChildren<CustomProperties>())
