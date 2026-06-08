@@ -123,10 +123,12 @@ public class TimeWeatherManager : MonoBehaviour
             return;
         }
         Instance = this;
+        Debug.Log($"[TimeWeatherManager] Awake on {gameObject.name}");
     }
 
     void Start()
     {
+        Debug.Log($"[TimeWeatherManager] Start initialization on {gameObject.name}");
         _currentDay = startDay;
         _gameStartTime = DateTime.Now;
         _weatherTimer = weatherChangeDuration;

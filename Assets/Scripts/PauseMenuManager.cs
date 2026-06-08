@@ -149,7 +149,7 @@ public class PauseMenuManager : MonoBehaviour
     {
         float bgm  = PlayerPrefs.GetFloat(KEY_BGM,         1f);
         float sfx  = PlayerPrefs.GetFloat(KEY_SFX,         1f);
-        float sens = PlayerPrefs.GetFloat(KEY_SENSITIVITY, 2f);
+        float sens = PlayerPrefs.GetFloat(KEY_SENSITIVITY, 1f);
 
         if (sliderBGM != null)
         {

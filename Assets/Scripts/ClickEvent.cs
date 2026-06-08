@@ -8,183 +8,262 @@ enum Phases
 
 public class ClickEvent : MonoBehaviour
 {
+    public static ClickEvent Instance { get; private set; }
+
     public Transform cameraTransform;
     public Transform holdPoint;
     public float range = 100f;
 
     public GameObject seedPrefab;
+    public GameObject fertilizerPrefab;
     public GameObject plantPrefab;
 
     GameObject heldObject;
     int heldUses = 0;
 
+    public bool IsHoldingWateringCan { get; private set; }
+
+    void Awake()
+    {
+        Instance = this;
+    }
+
     void Update()
     {
+        // Check if holding watering can for UI visibility
+        IsHoldingWateringCan = false;
+        if (heldObject != null)
+        {
+            CustomProperties heldProps = heldObject.GetComponentInChildren<CustomProperties>();
+            if (heldProps != null && (System.Array.Exists(heldProps.properties, p => p == "watering_can") || heldObject.name.Contains("watering_can")))
+            {
+                IsHoldingWateringCan = true;
+            }
+        }
+
+        // --- TIE UP LOGIC ---
+        if (Input.GetKeyDown(KeyCode.T))
+        {
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            RaycastHit hit;
+            if (Physics.Raycast(ray, out hit, range))
+            {
+                PlantGrowth plant = hit.collider.GetComponentInParent<PlantGrowth>();
+                if (plant != null) plant.TieUp();
+            }
+        }
+
+        // If holding watering can, handle continuous spray
+        if (heldObject != null)
+        {
+            CustomProperties heldProps = heldObject.GetComponentInChildren<CustomProperties>();
+            bool isWateringCan = heldProps != null && (System.Array.Exists(heldProps.properties, p => p == "watering_can") || heldObject.name.Contains("watering_can"));
+
+            if (isWateringCan)
+            {
+                ParticleSystem ps = heldObject.GetComponentInChildren<ParticleSystem>();
+                if (Input.GetMouseButton(0))
+                {
+                    Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+                    RaycastHit[] hits = Physics.SphereCastAll(ray, 0.5f, range, Physics.AllLayers, QueryTriggerInteraction.Collide);
+                    
+                    if (hits.Length > 0)
+                    {
+                        if (ps != null && !ps.isPlaying) ps.Play();
+                        foreach (var hitInfo in hits)
+                        {
+                            PlantGrowth plant = hitInfo.collider.GetComponentInParent<PlantGrowth>() ?? 
+                                               hitInfo.collider.GetComponent<PlantGrowth>() ?? 
+                                               hitInfo.collider.GetComponentInChildren<PlantGrowth>();
+                            if (plant != null) plant.Water(0.5f * Time.deltaTime);
+                        }
+                    }
+                    else if (ps != null && ps.isPlaying) ps.Stop();
+                }
+                else if (ps != null && ps.isPlaying) ps.Stop();
+
+                if (Input.GetMouseButton(0)) return; 
+            }
+        }
+
         // 🖱️ LEFT CLICK = interact
         if (Input.GetMouseButtonDown(0))
         {
             Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
             RaycastHit hit;
-
             bool didHit = Physics.Raycast(ray, out hit, range);
 
-            if (didHit)
-            {
-                Debug.Log("Hit: " + hit.collider.name);
-            }
-            else
-            {
-                Debug.Log("Hit nothing");
-            }
-
-            // If holding something → only try planting
             if (heldObject != null)
             {
+                CustomProperties heldProps = heldObject.GetComponentInChildren<CustomProperties>();
+                bool isSeed = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "seed");
+                bool isFertilizer = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "fertilizer");
+
                 if (didHit)
                 {
-                    CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
+                    CustomProperties hitProps = hit.collider.GetComponentInParent<CustomProperties>();
+                    bool isDirt = hitProps != null && System.Array.Exists(hitProps.properties, p => p == "dirt");
 
-                    if (props != null && props.properties != null &&
-                        System.Array.Exists(props.properties, p => p == "dirt"))
+                    if (isFertilizer && isDirt)
                     {
-                        Debug.Log("Planting on dirt");
-                        Plant(hit.point);
+                        if (!System.Array.Exists(hitProps.properties, p => p == "fertilized"))
+                        {
+                            System.Collections.Generic.List<string> pList = new System.Collections.Generic.List<string>(hitProps.properties);
+                            pList.Add("fertilized");
+                            hitProps.properties = pList.ToArray();
+                            heldUses--;
+                            ItemData data = heldObject.GetComponent<ItemData>();
+                            if (data != null) data.uses = heldUses;
+                            if (heldUses <= 0) { Destroy(heldObject); heldObject = null; }
+                            return;
+                        }
+                    }
+
+                    if (isSeed && isDirt)
+                    {
+                        Plant(hit.point, hitProps);
                         return;
                     }
                 }
-
-                // ❌ NO MORE dropping here
                 return;
             }
 
-            // Not holding anything → normal interaction
             if (didHit)
             {
-                CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
+                if (hit.collider.gameObject.name == "ComputerCollider" && DayProgressionManager.Instance != null)
+                {
+                    DayProgressionManager.Instance.OnComputerClicked();
+                    return;
+                }
 
+                CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
                 if (props != null && props.properties != null)
                 {
-                    if (System.Array.Exists(props.properties, p => p == "seed_storage"))
-                    {
-                        Debug.Log("Took seeds");
-                        SpawnSeeds(seedPrefab, 30);
-                    }
-
-                    if (System.Array.Exists(props.properties, p => p == "pickup"))
-                    {
-                        Debug.Log("Picked up object");
-                        PickupObject(hit.collider.transform.root.gameObject);
-                    }
+                    if (System.Array.Exists(props.properties, p => p == "seed_storage")) SpawnItem(seedPrefab, 30, "seed");
+                    else if (System.Array.Exists(props.properties, p => p == "fertilizer_storage")) SpawnItem(fertilizerPrefab, 10, "fertilizer");
+                    else if (System.Array.Exists(props.properties, p => p == "pickup")) PickupObject(hit.collider.transform.root.gameObject);
                 }
             }
         }
 
-        // 🖱️ RIGHT CLICK = drop
-        if (Input.GetMouseButtonDown(1))
+        if (Input.GetMouseButtonDown(1) && heldObject != null) DropObject();
+    }
+
+    void LateUpdate()
+    {
+        if (heldObject != null)
         {
-            if (heldObject != null)
+            // Look for properties in the object or its children (model)
+            CustomProperties props = heldObject.GetComponentInChildren<CustomProperties>();
+            if (props != null)
             {
-                Debug.Log("Dropped with right click");
-                DropObject();
+                heldObject.transform.localPosition = props.heldPosition;
+                heldObject.transform.localRotation = Quaternion.Euler(props.heldRotation);
+                heldObject.transform.localScale = props.heldScale;
             }
         }
     }
 
-    void SpawnSeeds(GameObject prefab, int amount)
+    void SpawnItem(GameObject prefab, int amount, string tag)
     {
         if (prefab == null) return;
-
-        if (heldObject != null)
-        {
-            Destroy(heldObject);
-        }
+        if (heldObject != null) Destroy(heldObject);
 
         heldObject = Instantiate(prefab);
         heldUses = amount;
+        
+        CustomProperties props = heldObject.GetComponentInChildren<CustomProperties>();
+        if (props == null) props = heldObject.AddComponent<CustomProperties>();
+        
+        System.Collections.Generic.List<string> pList = new System.Collections.Generic.List<string>();
+        if (props.properties != null) pList.AddRange(props.properties);
+        if (!pList.Contains("pickup")) pList.Add("pickup");
+        if (!pList.Contains(tag)) pList.Add(tag);
+        props.properties = pList.ToArray();
 
-        EnsurePickupProperty(heldObject);
-
-        ItemData data = heldObject.GetComponent<ItemData>();
+        ItemData data = heldObject.GetComponentInChildren<ItemData>();
         if (data == null) data = heldObject.AddComponent<ItemData>();
         data.uses = amount;
 
         PrepareHeldObject(heldObject);
     }
 
-    void Plant(Vector3 position)
+    void Plant(Vector3 position, CustomProperties dirtProps)
     {
         if (heldUses <= 0) return;
-
-        Quaternion randomRot = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-
-        GameObject plant = Instantiate(plantPrefab, position + Vector3.up * 0.1f, randomRot);
-
-        // ❌ remove pickup
-        foreach (CustomProperties p in plant.GetComponentsInChildren<CustomProperties>())
+        float checkRadius = 0.25f;
+        Collider[] hitColliders = Physics.OverlapSphere(position, checkRadius);
+        foreach (var hitCollider in hitColliders)
         {
-            p.properties = new string[] { "planted" };
+            if (hitCollider.GetComponentInParent<PlantGrowth>() != null) return;
         }
 
-        // freeze physics
+        Quaternion rotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
+        GameObject plant = Instantiate(plantPrefab, position, rotation);
+        PlantGrowth pg = plant.GetComponent<PlantGrowth>();
+        if (pg != null) pg.isFertilized = System.Array.Exists(dirtProps.properties, p => p == "fertilized");
+
+        CustomProperties rootProps = plant.GetComponent<CustomProperties>() ?? plant.AddComponent<CustomProperties>();
+        rootProps.properties = new string[] { "planted" };
+
         foreach (Rigidbody rb in plant.GetComponentsInChildren<Rigidbody>())
+        {
+            rb.isKinematic = true;
+            rb.useGravity = false;
+        }
+
+        heldUses--;
+        ItemData data = heldObject.GetComponentInChildren<ItemData>();
+        if (data != null) data.uses = heldUses;
+        if (heldUses <= 0) { Destroy(heldObject); heldObject = null; }
+    }
+
+    void PickupObject(GameObject obj)
+    {
+        if (heldObject != null) DropObject();
+        heldObject = obj;
+        PrepareHeldObject(heldObject);
+        ItemData data = heldObject.GetComponentInChildren<ItemData>();
+        heldUses = (data != null) ? data.uses : 0;
+    }
+
+    void PrepareHeldObject(GameObject obj)
+    {
+        foreach (Rigidbody rb in obj.GetComponentsInChildren<Rigidbody>())
         {
             rb.isKinematic = true;
             rb.useGravity = false;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
+
+            // RESET: If the model (child) moved away from the root due to physics, 
+            // snap it back to the center of the root parent upon pickup.
+            rb.transform.localPosition = Vector3.zero;
+            rb.transform.localRotation = Quaternion.identity;
         }
 
-        heldUses--;
-
-        ItemData data = heldObject.GetComponent<ItemData>();
-        if (data != null) data.uses = heldUses;
-
-        Debug.Log("Planted. Remaining: " + heldUses);
-
-        if (heldUses <= 0)
+        foreach (Collider col in obj.GetComponentsInChildren<Collider>())
         {
-            Destroy(heldObject);
-            heldObject = null;
+            col.enabled = false;
         }
-    }
 
-    void PickupObject(GameObject obj)
-    {
-        if (heldObject != null)
+        // Look for properties in root or children (model)
+        CustomProperties props = obj.GetComponentInChildren<CustomProperties>();
+        if (props == null) props = obj.AddComponent<CustomProperties>();
+        
+        if (props.originalScale == Vector3.one || props.originalScale == Vector3.zero)
         {
-            DropObject();
+            props.originalScale = obj.transform.localScale;
         }
-
-        heldObject = obj;
-
-        ItemData data = heldObject.GetComponent<ItemData>();
-        heldUses = (data != null) ? data.uses : 0;
-    }
-
-    void EnsurePickupProperty(GameObject obj)
-    {
-        CustomProperties props = obj.GetComponent<CustomProperties>();
-
-        if (props == null)
-        {
-            props = obj.AddComponent<CustomProperties>();
-        }
-
-        props.properties = new string[] { "pickup" };
-    }
-
-    void PrepareHeldObject(GameObject obj)
-    {
-        Rigidbody rb = obj.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = true;
-
-        Collider col = obj.GetComponent<Collider>();
-        if (col != null) col.enabled = false;
 
         obj.transform.SetParent(holdPoint);
-        obj.transform.localPosition = Vector3.zero;
-        obj.transform.localRotation = Quaternion.identity;
-        obj.transform.localScale = Vector3.one;
+        
+        // Apply offsets from properties
+        obj.transform.localPosition = props.heldPosition;
+        obj.transform.localRotation = Quaternion.Euler(props.heldRotation);
+        obj.transform.localScale = props.heldScale;
+
+        Debug.Log($"Prepared {obj.name} with offsets: {props.heldPosition}");
     }
 
     void DropObject()
@@ -192,12 +271,19 @@ public class ClickEvent : MonoBehaviour
         if (heldObject == null) return;
 
         heldObject.transform.SetParent(null);
+        CustomProperties props = heldObject.GetComponentInChildren<CustomProperties>();
+        if (props != null) heldObject.transform.localScale = props.originalScale;
 
-        Rigidbody rb = heldObject.GetComponent<Rigidbody>();
-        if (rb != null) rb.isKinematic = false;
+        foreach (Rigidbody rb in heldObject.GetComponentsInChildren<Rigidbody>())
+        {
+            rb.isKinematic = false;
+            rb.useGravity = true;
+        }
 
-        Collider col = heldObject.GetComponent<Collider>();
-        if (col != null) col.enabled = true;
+        foreach (Collider col in heldObject.GetComponentsInChildren<Collider>())
+        {
+            col.enabled = true;
+        }
 
         heldObject = null;
         heldUses = 0;
