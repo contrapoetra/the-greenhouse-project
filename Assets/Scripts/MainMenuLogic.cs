@@ -6,34 +6,67 @@ using UnityEngine.UI;
 
 public class MainMenuLogic : MonoBehaviour
 {
+    [Header("── Menu States ──")]
+    [Tooltip("Normal main menu (New Game only)")]
     public GameObject PanelMainMenu;
+    [Tooltip("Saved game menu (Resume / New Game)")]
+    public GameObject PanelMainMenuSavedGame;
+
+    [Header("── Sub Panels ──")]
     public GameObject PanelSetting;
     public GameObject PanelTutorial;
 
+    void Start()
+    {
+        BackMainMenu(); // Initialize UI state
+    }
+
+    public void CheckSaveFile()
+    {
+        bool hasSave = SaveSystem.Instance != null && SaveSystem.Instance.SaveFileExists();
+        
+        if (PanelMainMenu != null) PanelMainMenu.SetActive(!hasSave);
+        if (PanelMainMenuSavedGame != null) PanelMainMenuSavedGame.SetActive(hasSave);
+    }
+
+    private void HideAllMenus()
+    {
+        if (PanelMainMenu != null) PanelMainMenu.SetActive(false);
+        if (PanelMainMenuSavedGame != null) PanelMainMenuSavedGame.SetActive(false);
+        if (PanelSetting != null) PanelSetting.SetActive(false);
+        if (PanelTutorial != null) PanelTutorial.SetActive(false);
+    }
+
     public void OpenSetting()
     {
-        PanelMainMenu.SetActive(false);
+        HideAllMenus();
         PanelSetting.SetActive(true);
     }
 
     public void OpenTutorial()
     {
-        PanelMainMenu.SetActive(false);
+        HideAllMenus();
         PanelTutorial.SetActive(true);
     }
+
     public void BackMainMenu()
     {
-        PanelMainMenu.SetActive(true);
-        PanelSetting.SetActive(false);
-        PanelTutorial.SetActive(false);
+        HideAllMenus();
+        CheckSaveFile();
     }
-
-
-
 
     public void OpenGamePlay()
     {
         SceneManager.LoadScene("OutdoorsScene");
+    }
+
+    public void NewGame()
+    {
+        if (SaveSystem.Instance != null)
+        {
+            SaveSystem.Instance.DeleteSave();
+        }
+        OpenGamePlay();
     }
     
     public void ExitGame()
@@ -48,17 +81,5 @@ public class MainMenuLogic : MonoBehaviour
     Application.Quit();
 #endif
 }
-
-
-    void Start()
-
-    {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
 }
+

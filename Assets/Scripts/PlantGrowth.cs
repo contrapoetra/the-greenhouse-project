@@ -16,11 +16,17 @@ public class PlantGrowth : MonoBehaviour
     public bool isPollinated = false;
     public bool isFertilized = false;
     public float waterLevel = 0f;
+    public bool isFruitVisible = false; // Whether fruit is actually shown
 
-    private float _growthTracker = 0f; // Tracks progress towards next stage
+    private float _growthTracker = 0f; 
+    private int _pollinationCycles = 0; // Growth cycles completed since pollination
 
     public bool isWatered => waterLevel > 0.5f;
-    public bool hasFruit => isPollinated && currentStage >= 6;
+    public bool hasFruit => isFruitVisible && currentStage >= 6;
+
+    // Helpers for Save System
+    public float GetGrowthTracker() => _growthTracker;
+    public int GetPollinationCycles() => _pollinationCycles;
 
     void Start()
     {
@@ -39,26 +45,29 @@ public class PlantGrowth : MonoBehaviour
         Debug.Log($"Plant watered. Current level: {waterLevel}");
     }
 
-    public void ProgressStage()
+    public void ProgressStage(bool force = false)
     {
-        // Require water for growth
-        if (!isWatered)
+        // Require water for growth (unless forced via debug)
+        if (!force && !isWatered)
         {
             Debug.Log("Growth halted: Plant needs water.");
             return;
         }
 
-        // Halt growth at Stage 3 if not pollinated
-        if (currentStage == 3 && !isPollinated)
+        // Track pollination progress: fruit appears 3 growth cycles after pollination
+        if (isPollinated && !isFruitVisible)
         {
-            Debug.Log("Growth halted: Plant needs pollination at Stage 3.");
-            return;
+            _pollinationCycles++;
+            if (_pollinationCycles >= 3)
+            {
+                isFruitVisible = true;
+                Debug.Log("Fruit is now visible due to pollination progress!");
+                UpdateVisuals();
+            }
         }
 
         // Calculate growth amount
-        // Fertilized = 1 stage/day
-        // Not fertilized = 0.5 stage/day (takes 2 days)
-        float growthAmount = isFertilized ? 1f : 0.5f;
+        float growthAmount = (isFertilized || force) ? 1f : 0.5f;
         _growthTracker += growthAmount;
 
         if (_growthTracker >= 1f)
@@ -67,15 +76,15 @@ public class PlantGrowth : MonoBehaviour
             {
                 currentStage++;
                 _growthTracker = 0f;
-                waterLevel = 0f; // Consume water on growth
+                waterLevel = 0f;
                 UpdateVisuals();
                 Debug.Log($"Plant grew to stage {currentStage}");
             }
         }
         else
         {
-            waterLevel = 0f; // Still consume water even if didn't reach next stage
-            Debug.Log("Plant is growing... (Need one more day without fertilizer)");
+            waterLevel = 0f;
+            Debug.Log("Plant is growing...");
         }
     }
 
@@ -85,6 +94,7 @@ public class PlantGrowth : MonoBehaviour
         {
             isTiedUp = true;
             UpdateVisuals();
+            Debug.Log($"Plant is now TIED UP.");
         }
     }
 
@@ -99,17 +109,41 @@ public class PlantGrowth : MonoBehaviour
 
             if (isCurrent)
             {
-                // Toggle children based on name and state
                 foreach (Transform child in stageParents[i].transform)
                 {
+                    // 1. Fruit logic - now uses isFruitVisible
                     if (child.name == "fruithanging")
-                        child.gameObject.SetActive(hasFruit);
+                        child.gameObject.SetActive(isFruitVisible && currentStage >= 6);
+
+                    // 2. Regular models (Pollinated or early stages)
                     else if (child.name == "tiedup")
-                        child.gameObject.SetActive(!hasFruit && isTiedUp);
+                        child.gameObject.SetActive(isTiedUp && (isFruitVisible || currentStage < 5));
                     else if (child.name == "unkempt")
-                        child.gameObject.SetActive(!hasFruit && !isTiedUp);
+                        child.gameObject.SetActive(!isTiedUp && (isFruitVisible || currentStage < 5));
+
+                    // 3. Fruitless models (Stages 5 and 6 only)
+                    else if (child.name == "tiedup-fruitless")
+                        child.gameObject.SetActive(isTiedUp && !isFruitVisible && currentStage >= 5);
+                    else if (child.name == "unkempt-fruitless")
+                        child.gameObject.SetActive(!isTiedUp && !isFruitVisible && currentStage >= 5);
                 }
             }
         }
+    }
+
+    public void LoadFromData(PlantSaveData data)
+    {
+        this.currentStage = data.currentStage;
+        this.waterLevel = data.waterLevel;
+        this.isFertilized = data.isFertilized;
+        this.isPollinated = data.isPollinated;
+        this.isTiedUp = data.isTiedUp;
+        this._growthTracker = data.growthTracker;
+        this._pollinationCycles = data.pollinationCycles;
+        this.isFruitVisible = data.isFruitVisible;
+        
+        Debug.Log($"[PlantGrowth] Loaded: Stage {currentStage}, TiedUp: {isTiedUp}, FruitVisible: {isFruitVisible}");
+        
+        UpdateVisuals();
     }
 }

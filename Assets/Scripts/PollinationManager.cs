@@ -7,10 +7,13 @@ public class PollinationManager : MonoBehaviour
 
     [Header("UI Feedback")]
     public Image crosshair;
+    public Sprite normalSprite;
+    public Sprite pollenSprite;
     public Color normalColor = Color.white;
     public Color pollenColor = Color.yellow;
 
-    private bool hasMalePollen = false;
+    private bool _hasMalePollen = false;
+    public bool HasPollen => _hasMalePollen;
     private GameObject lastMaleFlower;
 
     void Awake()
@@ -25,30 +28,25 @@ public class PollinationManager : MonoBehaviour
 
     void Start()
     {
-        if (crosshair != null)
-            crosshair.color = normalColor;
+        UpdateCrosshair();
     }
 
     public void OnFlowerClicked(GameObject flower, string type)
     {
         if (type == "male_flower")
         {
-            hasMalePollen = true;
+            _hasMalePollen = true;
             lastMaleFlower = flower;
             Debug.Log("Pollen collected from male flower.");
-
-            if (crosshair != null)
-                crosshair.color = pollenColor;
+            UpdateCrosshair();
         }
         else if (type == "female_flower")
         {
-            if (hasMalePollen)
+            if (_hasMalePollen)
             {
                 Debug.Log("Pollinated female flower!");
-                hasMalePollen = false;
-
-                if (crosshair != null)
-                    crosshair.color = normalColor;
+                _hasMalePollen = false;
+                UpdateCrosshair();
 
                 // Trigger pollination effect on the plant
                 PlantGrowth plant = flower.GetComponentInParent<PlantGrowth>();
@@ -65,11 +63,32 @@ public class PollinationManager : MonoBehaviour
         }
     }
 
+    public void RestorePollenState(bool hasPollen)
+    {
+        _hasMalePollen = hasPollen;
+        UpdateCrosshair();
+    }
+
     public void ResetPollen()
     {
-        hasMalePollen = false;
+        _hasMalePollen = false;
         lastMaleFlower = null;
-        if (crosshair != null)
+        UpdateCrosshair();
+    }
+
+    private void UpdateCrosshair()
+    {
+        if (crosshair == null) return;
+
+        if (_hasMalePollen)
+        {
+            crosshair.color = pollenColor;
+            if (pollenSprite != null) crosshair.sprite = pollenSprite;
+        }
+        else
+        {
             crosshair.color = normalColor;
+            if (normalSprite != null) crosshair.sprite = normalSprite;
+        }
     }
 }

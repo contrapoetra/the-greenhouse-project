@@ -70,13 +70,28 @@ public class InteractionPrompt : MonoBehaviour
 
     void CheckInteractable()
     {
-        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
         RaycastHit hit;
+        bool didHit = false;
 
-        bool didHit = Physics.Raycast(ray, out hit, range);
+        // Use the prioritized hit logic from ClickEvent if available
+        if (clickEvent != null)
+        {
+            didHit = clickEvent.GetPrioritizedHit(out hit);
+        }
+        else
+        {
+            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+            didHit = Physics.Raycast(ray, out hit, range);
+        }
+
+        if (!didHit)
+        {
+            HidePrompt();
+            return;
+        }
 
         // Special check for Computer
-        if (didHit && (hit.collider.gameObject.name == "ComputerCollider" || hit.collider.name.ToLower().Contains("computer") || hit.collider.name.ToLower().Contains("pc")))
+        if (hit.collider.gameObject.name == "ComputerCollider" || hit.collider.name.ToLower().Contains("computer") || hit.collider.name.ToLower().Contains("pc"))
         {
             if (DayProgressionManager.Instance != null)
             {
@@ -96,16 +111,10 @@ public class InteractionPrompt : MonoBehaviour
             return;
         }
 
-        if (!didHit)
-        {
-            HidePrompt();
-            return;
-        }
-
         CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
         GameObject held = GetHeldObject();
 
-        string prompt = GetPromptText(props != null ? props.properties : null, held);
+        string prompt = GetPromptText(hit.collider.gameObject, props != null ? props.properties : null, held);
 
         if (!string.IsNullOrEmpty(prompt))
         {
@@ -120,11 +129,11 @@ public class InteractionPrompt : MonoBehaviour
     /// <summary>
     /// Tentukan teks prompt berdasarkan property objek dan status holding.
     /// </summary>
-    string GetPromptText(string[] targetProperties, GameObject held)
+    string GetPromptText(GameObject hitObj, string[] targetProperties, GameObject held)
     {
         if (held != null)
         {
-            CustomProperties heldProps = held.GetComponent<CustomProperties>();
+            CustomProperties heldProps = held.GetComponentInChildren<CustomProperties>();
             bool isSeed = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "seed");
             bool isWateringCan = heldProps != null && (System.Array.Exists(heldProps.properties, p => p == "watering_can") || held.name.Contains("watering_can"));
             bool isFertilizer = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "fertilizer");
@@ -160,10 +169,25 @@ public class InteractionPrompt : MonoBehaviour
             return "[Klik Kiri] Periksa Tanaman";
 
         if (System.Array.Exists(targetProperties, p => p == "male_flower"))
+        {
+            if (PollinationManager.Instance != null && PollinationManager.Instance.HasPollen)
+                return "Sudah bawa polen";
             return "[Klik Kiri] Ambil Polen";
+        }
 
         if (System.Array.Exists(targetProperties, p => p == "female_flower"))
-            return "[Klik Kiri] Serbuk Sari";
+        {
+            // Check if it's too late (Stage 6)
+            PlantGrowth pg = hitObj.GetComponentInParent<PlantGrowth>();
+            if (pg != null && pg.currentStage == 6)
+            {
+                return "Bunga sudah layu";
+            }
+
+            if (PollinationManager.Instance != null && PollinationManager.Instance.HasPollen)
+                return "[Klik Kiri] Penyerbukan";
+            return "Butuh polen bunga jantan";
+        }
 
         return null;
     }

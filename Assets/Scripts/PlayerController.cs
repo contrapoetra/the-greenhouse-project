@@ -15,6 +15,14 @@ public class PlayerController : MonoBehaviour
     float yVelocity = 0f;
     float gravity = -9.81f;
 
+    [Header("── Zoom Settings ──")]
+    public float minZoomFOV = 10f;
+    public float maxZoomFOV = 40f;
+    public float zoomSmoothSpeed = 10f;
+    public float scrollSensitivity = 5f;
+    private float _defaultFOV;
+    private float _currentZoomTarget = 30f;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -26,9 +34,21 @@ public class PlayerController : MonoBehaviour
         controller = GetComponent<CharacterController>();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+        if (Camera.main != null)
+        {
+            _defaultFOV = Camera.main.fieldOfView;
+            _currentZoomTarget = 30f; // Initial zoom target
+        }
     }
 
     void Update()
+    {
+        HandleMovement();
+        HandleRotation();
+        HandleZoom();
+    }
+
+    void HandleMovement()
     {
         float currentSpeed = Input.GetKey(KeyCode.LeftShift) ? runSpeed : walkSpeed;
 
@@ -48,7 +68,10 @@ public class PlayerController : MonoBehaviour
         velocity.y = yVelocity;
 
         controller.Move(velocity * Time.deltaTime);
+    }
 
+    void HandleRotation()
+    {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
@@ -57,5 +80,31 @@ public class PlayerController : MonoBehaviour
 
         cameraPivot.localRotation = Quaternion.Euler(xRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
+    }
+
+    void HandleZoom()
+    {
+        if (Camera.main == null) return;
+
+        // Condition: Right Click is held, AND holding nothing, AND not viewing computer tasks
+        bool isHoldingNothing = ClickEvent.Instance != null && ClickEvent.Instance.GetHeldItemType() == "none";
+        bool isViewingComputer = DayProgressionManager.Instance != null && DayProgressionManager.Instance.IsViewingTasks;
+
+        if (Input.GetMouseButton(1) && isHoldingNothing && !isViewingComputer)
+        {
+            // Scroll to adjust zoom target
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (Mathf.Abs(scroll) > 0.01f)
+            {
+                _currentZoomTarget -= scroll * scrollSensitivity * 10f;
+                _currentZoomTarget = Mathf.Clamp(_currentZoomTarget, minZoomFOV, maxZoomFOV);
+            }
+
+            Camera.main.fieldOfView = Mathf.Lerp(Camera.main.fieldOfView, _currentZoomTarget, Time.deltaTime * zoomSmoothSpeed);
+        }
+        else if (!isViewingComputer) // Don't fight computer zoom if active
+        {
+            Camera.main.fieldOfView = Mathf.Lerp(Camera.main.fieldOfView, _defaultFOV, Time.deltaTime * zoomSmoothSpeed);
+        }
     }
 }

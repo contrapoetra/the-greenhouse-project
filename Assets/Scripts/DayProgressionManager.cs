@@ -48,6 +48,9 @@ public class DayProgressionManager : MonoBehaviour
     private Vector3 _originalCameraLocalPos;
     private Quaternion _originalCameraLocalRot;
 
+    // --- Debug ---
+    private bool _isForcedProgression = false;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -65,38 +68,42 @@ public class DayProgressionManager : MonoBehaviour
             _defaultFOV = Camera.main.fieldOfView;
         }
 
-        // Initialize Day 0 Weather (Sunny)
-        if (TimeWeatherManager.Instance != null)
+        // --- LOAD GAME ---
+        if (SaveSystem.Instance != null && SaveSystem.Instance.SaveFileExists())
         {
-            TimeWeatherManager.Instance.ForceWeather(TimeWeatherManager.WeatherType.Sunny);
+            string json = System.IO.File.ReadAllText(System.IO.Path.Combine(Application.persistentDataPath, "melon_save.json"));
+            GameSaveData data = JsonUtility.FromJson<GameSaveData>(json);
+            _currentDay = data.currentDay;
+            SaveSystem.Instance.LoadGame();
+        }
+        else
+        {
+            ApplyNarrativeWeather(_currentDay);
         }
 
-        StartCoroutine(StartDayTransition(0));
+        StartCoroutine(StartDayTransition(_currentDay));
         if (computerCollider != null) computerCollider.SetActive(true);
     }
 
     void Update()
     {
-        // Debug Key G: Force progress to next day
         if (Input.GetKeyDown(KeyCode.G))
         {
-            Debug.Log("Debug: Forced Day Progression via G key");
-            OnComputerClicked(true); // Bypass tasks
+            Debug.Log("Debug: Forced Instant Day Progression via G key");
+            _isForcedProgression = true;
+            OnComputerClicked(true); 
         }
 
-        if (_currentDay == 0 && !_dayEndEnabled) CheckDay0Tasks();
-        if (_currentDay >= 1 && !_dayEndEnabled) CheckDay1Tasks();
+        if (!_dayEndEnabled)
+        {
+            if (_currentDay == 0) CheckDay0Tasks();
+            else CheckGenericWateringTasks();
+        }
 
         if (_isViewingTasks)
         {
-            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1))
-            {
-                ExitComputerView();
-            }
-            else
-            {
-                HandleComputerViewZoom();
-            }
+            if (Input.GetKeyDown(KeyCode.Escape) || Input.GetMouseButtonDown(1)) ExitComputerView();
+            else HandleComputerViewZoom();
         }
     }
 
@@ -108,7 +115,6 @@ public class DayProgressionManager : MonoBehaviour
             _targetFOV -= scroll * zoomSpeed * 10f;
             _targetFOV = Mathf.Clamp(_targetFOV, minFOV, maxFOV);
         }
-
         if (Camera.main != null)
             Camera.main.fieldOfView = Mathf.Lerp(Camera.main.fieldOfView, _targetFOV, Time.deltaTime * 5f);
     }
@@ -120,57 +126,45 @@ public class DayProgressionManager : MonoBehaviour
         int watered = 0;
         foreach (var p in plants) if (p.waterLevel >= 1f) watered++;
         CurrentWateredCount = watered;
-
-        if (CurrentPlantedCount >= requiredPlants && CurrentWateredCount >= CurrentPlantedCount)
-        {
-            _dayEndEnabled = true;
-            EnableDayEnd();
-        }
+        if (CurrentPlantedCount >= requiredPlants && CurrentWateredCount >= CurrentPlantedCount) EnableDayEnd();
     }
 
-    private void CheckDay1Tasks()
+    private void CheckGenericWateringTasks()
     {
-        // Day 1: Just water all existing plants
         PlantGrowth[] plants = Object.FindObjectsByType<PlantGrowth>(FindObjectsSortMode.None);
         if (plants.Length == 0) return;
-
         int watered = 0;
         foreach (var p in plants) if (p.waterLevel >= 1f) watered++;
         CurrentWateredCount = watered;
         CurrentPlantedCount = plants.Length;
-
-        if (watered >= plants.Length)
-        {
-            _dayEndEnabled = true;
-            EnableDayEnd();
-        }
+        if (watered >= plants.Length) EnableDayEnd();
     }
 
     public void OnComputerClicked(bool bypassTasks = false)
     {
         if (_isViewingTasks) ExitComputerView();
         else if (!_dayEndEnabled && !bypassTasks) EnterComputerView();
-        else StartCoroutine(EndDayTransition());
+        else 
+        {
+            if (bypassTasks) _isForcedProgression = true;
+            StartCoroutine(EndDayTransition());
+        }
     }
 
     private void EnterComputerView()
     {
         if (_isViewingTasks) return;
         _isViewingTasks = true;
-
         if (Camera.main != null)
         {
             _targetFOV = _defaultFOV;
             StopAllCoroutines();
-            
             if (PlayerController.Instance != null) PlayerController.Instance.enabled = false;
-
             if (computerViewPoint != null)
             {
                 Camera.main.transform.SetParent(computerViewPoint);
                 StartCoroutine(LerpToTransform(Camera.main.transform, Vector3.zero, Quaternion.identity, 0.4f));
             }
-            
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
@@ -180,20 +174,16 @@ public class DayProgressionManager : MonoBehaviour
     {
         if (!_isViewingTasks) return;
         _isViewingTasks = false;
-
         StopAllCoroutines();
-
         if (Camera.main != null)
         {
             Transform cam = Camera.main.transform;
             cam.SetParent(_originalCameraParent);
             cam.localPosition = _originalCameraLocalPos;
             cam.localRotation = _originalCameraLocalRot;
-
             if (PlayerController.Instance != null) PlayerController.Instance.enabled = true;
             StartCoroutine(LerpFOV(_defaultFOV, 0.3f));
         }
-
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
@@ -235,66 +225,93 @@ public class DayProgressionManager : MonoBehaviour
         Debug.Log("TASKS DONE");
     }
 
-    private IEnumerator StartDayTransition(int dayNumber)
+    private void ApplyNarrativeWeather(int day)
+    {
+        if (TimeWeatherManager.Instance == null) return;
+        if (day == 0) TimeWeatherManager.Instance.ForceWeather(TimeWeatherManager.WeatherType.Sunny);
+        else if (day == 1) TimeWeatherManager.Instance.ForceWeather(TimeWeatherManager.WeatherType.Rainy);
+        else TimeWeatherManager.Instance.AdvanceDay(0); 
+    }
+
+    private IEnumerator StartDayTransition(int dayNumber, bool instant = false)
     {
         _currentDay = dayNumber;
         _dayEndEnabled = false;
 
-        // --- Weather Control ---
-        if (TimeWeatherManager.Instance != null)
-        {
-            if (_currentDay == 0) TimeWeatherManager.Instance.ForceWeather(TimeWeatherManager.WeatherType.Sunny);
-            else if (_currentDay == 1) TimeWeatherManager.Instance.ForceWeather(TimeWeatherManager.WeatherType.Rainy);
-            else TimeWeatherManager.Instance.AdvanceDay(0); // Regular random roll for Day 2+
-        }
-
         if (dayTitleText != null) { dayTitleText.text = "Day " + _currentDay; dayTitleText.alpha = 1f; }
         
-        yield return new WaitForSeconds(titleDisplayDuration);
-        
-        float elapsed = 0f;
-        while (elapsed < fadeDuration)
+        if (instant)
         {
-            elapsed += Time.deltaTime;
-            float alpha = 1f - (elapsed / fadeDuration);
-            if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = alpha;
-            if (dayTitleText != null) dayTitleText.alpha = alpha;
-            yield return null;
+            // Just a split second flash of the title for feedback
+            yield return new WaitForSeconds(0.2f);
+            if (dayTitleText != null) dayTitleText.alpha = 0f;
+            if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 0f;
         }
+        else
+        {
+            yield return new WaitForSeconds(titleDisplayDuration);
+            float elapsed = 0f;
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.deltaTime;
+                float alpha = 1f - (elapsed / fadeDuration);
+                if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = alpha;
+                if (dayTitleText != null) dayTitleText.alpha = alpha;
+                yield return null;
+            }
+        }
+
         if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 0f;
         if (dayTitleText != null) dayTitleText.alpha = 0f;
     }
 
     private IEnumerator EndDayTransition()
     {
-        // Close task view if open
         if (_isViewingTasks) ExitComputerView();
 
-        float elapsed = 0f;
-        while (elapsed < fadeDuration)
+        bool isInstant = _isForcedProgression;
+
+        if (!isInstant)
         {
-            elapsed += Time.deltaTime;
-            float alpha = elapsed / fadeDuration;
-            if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = alpha;
-            yield return null;
+            float elapsed = 0f;
+            while (elapsed < fadeDuration)
+            {
+                elapsed += Time.deltaTime;
+                float alpha = elapsed / fadeDuration;
+                if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = alpha;
+                yield return null;
+            }
+            if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 1f;
         }
-        if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 1f;
         
-        // 1. Respawn Player
+        // 1. Progression
+        _currentDay++;
+        if (PlantManager.Instance != null)
+        {
+            PlantManager.Instance.GrowAllPlants(isInstant);
+        }
+
+        // 2. Weather
+        ApplyNarrativeWeather(_currentDay);
+
+        // 3. Respawn
         if (PlayerController.Instance != null && spawnPoint != null)
         {
             PlayerController.Instance.GetComponent<CharacterController>().enabled = false;
             PlayerController.Instance.transform.position = spawnPoint.position;
             PlayerController.Instance.transform.rotation = spawnPoint.rotation;
             PlayerController.Instance.GetComponent<CharacterController>().enabled = true;
-            Debug.Log("Player respawned at SpawnPoint.");
         }
 
-        // 2. Progression
-        _currentDay++;
-        if (PlantManager.Instance != null) PlantManager.Instance.GrowAllPlants();
+        // 4. SAVE
+        if (SaveSystem.Instance != null)
+        {
+            SaveSystem.Instance.SaveGame();
+        }
         
-        // 3. Start New Day
-        StartCoroutine(StartDayTransition(_currentDay));
+        // RESET FLAG
+        _isForcedProgression = false;
+
+        StartCoroutine(StartDayTransition(_currentDay, isInstant));
     }
 }

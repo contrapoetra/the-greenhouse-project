@@ -14,13 +14,13 @@ public class PlantManager : MonoBehaviour
         Instance = this;
     }
 
-    public void GrowAllPlants()
+    public void GrowAllPlants(bool force = false)
     {
         PlantGrowth[] plants = Object.FindObjectsByType<PlantGrowth>(FindObjectsSortMode.None);
         foreach (PlantGrowth plant in plants)
         {
-            plant.ProgressStage();
+            plant.ProgressStage(force);
         }
-        Debug.Log($"Progressed {plants.Length} plants.");
+        Debug.Log($"Progressed {plants.Length} plants (Forced: {force}).");
     }
 }

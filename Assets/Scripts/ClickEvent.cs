@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Linq;
 
 enum Phases
 {
@@ -17,11 +18,34 @@ public class ClickEvent : MonoBehaviour
     public GameObject seedPrefab;
     public GameObject fertilizerPrefab;
     public GameObject plantPrefab;
+    public GameObject wateringCanPrefab;
 
     GameObject heldObject;
     int heldUses = 0;
 
     public bool IsHoldingWateringCan { get; private set; }
+
+    // --- Save System Helpers ---
+    public string GetHeldItemType()
+    {
+        if (heldObject == null) return "none";
+        CustomProperties props = heldObject.GetComponentInChildren<CustomProperties>();
+        if (props == null) return "none";
+        if (System.Array.Exists(props.properties, p => p == "seed")) return "seed";
+        if (System.Array.Exists(props.properties, p => p == "fertilizer")) return "fertilizer";
+        if (System.Array.Exists(props.properties, p => p == "watering_can") || heldObject.name.Contains("watering_can")) return "watering_can";
+        return "none";
+    }
+
+    public int GetHeldItemUses() => heldUses;
+
+    public void RestoreHeldItem(string type, int uses)
+    {
+        if (type == "none") return;
+        if (type == "seed") SpawnItem(seedPrefab, uses, "seed");
+        else if (type == "fertilizer") SpawnItem(fertilizerPrefab, uses, "fertilizer");
+        else if (type == "watering_can") PickupObject(Instantiate(wateringCanPrefab));
+    }
 
     void Awake()
     {
@@ -30,7 +54,6 @@ public class ClickEvent : MonoBehaviour
 
     void Update()
     {
-        // Check if holding watering can for UI visibility
         IsHoldingWateringCan = false;
         if (heldObject != null)
         {
@@ -41,19 +64,16 @@ public class ClickEvent : MonoBehaviour
             }
         }
 
-        // --- TIE UP LOGIC ---
         if (Input.GetKeyDown(KeyCode.T))
         {
-            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
             RaycastHit hit;
-            if (Physics.Raycast(ray, out hit, range))
+            if (GetPrioritizedHit(out hit))
             {
                 PlantGrowth plant = hit.collider.GetComponentInParent<PlantGrowth>();
                 if (plant != null) plant.TieUp();
             }
         }
 
-        // If holding watering can, handle continuous spray
         if (heldObject != null)
         {
             CustomProperties heldProps = heldObject.GetComponentInChildren<CustomProperties>();
@@ -86,12 +106,10 @@ public class ClickEvent : MonoBehaviour
             }
         }
 
-        // 🖱️ LEFT CLICK = interact
         if (Input.GetMouseButtonDown(0))
         {
-            Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
             RaycastHit hit;
-            bool didHit = Physics.Raycast(ray, out hit, range);
+            bool didHit = GetPrioritizedHit(out hit);
 
             if (heldObject != null)
             {
@@ -112,7 +130,7 @@ public class ClickEvent : MonoBehaviour
                             pList.Add("fertilized");
                             hitProps.properties = pList.ToArray();
                             heldUses--;
-                            ItemData data = heldObject.GetComponent<ItemData>();
+                            ItemData data = heldObject.GetComponentInChildren<ItemData>();
                             if (data != null) data.uses = heldUses;
                             if (heldUses <= 0) { Destroy(heldObject); heldObject = null; }
                             return;
@@ -139,6 +157,17 @@ public class ClickEvent : MonoBehaviour
                 CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
                 if (props != null && props.properties != null)
                 {
+                    if (System.Array.Exists(props.properties, p => p == "male_flower"))
+                    {
+                        PollinationManager.Instance.OnFlowerClicked(hit.collider.gameObject, "male_flower");
+                        return;
+                    }
+                    if (System.Array.Exists(props.properties, p => p == "female_flower"))
+                    {
+                        PollinationManager.Instance.OnFlowerClicked(hit.collider.gameObject, "female_flower");
+                        return;
+                    }
+
                     if (System.Array.Exists(props.properties, p => p == "seed_storage")) SpawnItem(seedPrefab, 30, "seed");
                     else if (System.Array.Exists(props.properties, p => p == "fertilizer_storage")) SpawnItem(fertilizerPrefab, 10, "fertilizer");
                     else if (System.Array.Exists(props.properties, p => p == "pickup")) PickupObject(hit.collider.transform.root.gameObject);
@@ -149,11 +178,44 @@ public class ClickEvent : MonoBehaviour
         if (Input.GetMouseButtonDown(1) && heldObject != null) DropObject();
     }
 
+    /// <summary>
+    /// Uses RaycastAll to find specific interactables (like flowers) even if blocked by general plant colliders.
+    /// </summary>
+    public bool GetPrioritizedHit(out RaycastHit bestHit)
+    {
+        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+        RaycastHit[] hits = Physics.RaycastAll(ray, range);
+        bestHit = new RaycastHit();
+
+        if (hits.Length == 0) return false;
+
+        // 1. Sort by distance
+        var sortedHits = hits.OrderBy(h => h.distance).ToList();
+
+        // 2. Try to find HIGH PRIORITY targets (flowers) first, anywhere in the line
+        foreach (var hit in sortedHits)
+        {
+            CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
+            if (props != null && props.properties != null)
+            {
+                if (System.Array.Exists(props.properties, p => p == "male_flower") || 
+                    System.Array.Exists(props.properties, p => p == "female_flower"))
+                {
+                    bestHit = hit;
+                    return true;
+                }
+            }
+        }
+
+        // 3. Fallback to the very first thing we hit
+        bestHit = sortedHits[0];
+        return true;
+    }
+
     void LateUpdate()
     {
         if (heldObject != null)
         {
-            // Look for properties in the object or its children (model)
             CustomProperties props = heldObject.GetComponentInChildren<CustomProperties>();
             if (props != null)
             {
@@ -218,7 +280,7 @@ public class ClickEvent : MonoBehaviour
         if (heldUses <= 0) { Destroy(heldObject); heldObject = null; }
     }
 
-    void PickupObject(GameObject obj)
+    public void PickupObject(GameObject obj)
     {
         if (heldObject != null) DropObject();
         heldObject = obj;
@@ -235,9 +297,6 @@ public class ClickEvent : MonoBehaviour
             rb.useGravity = false;
             rb.linearVelocity = Vector3.zero;
             rb.angularVelocity = Vector3.zero;
-
-            // RESET: If the model (child) moved away from the root due to physics, 
-            // snap it back to the center of the root parent upon pickup.
             rb.transform.localPosition = Vector3.zero;
             rb.transform.localRotation = Quaternion.identity;
         }
@@ -247,7 +306,6 @@ public class ClickEvent : MonoBehaviour
             col.enabled = false;
         }
 
-        // Look for properties in root or children (model)
         CustomProperties props = obj.GetComponentInChildren<CustomProperties>();
         if (props == null) props = obj.AddComponent<CustomProperties>();
         
@@ -257,13 +315,9 @@ public class ClickEvent : MonoBehaviour
         }
 
         obj.transform.SetParent(holdPoint);
-        
-        // Apply offsets from properties
         obj.transform.localPosition = props.heldPosition;
         obj.transform.localRotation = Quaternion.Euler(props.heldRotation);
         obj.transform.localScale = props.heldScale;
-
-        Debug.Log($"Prepared {obj.name} with offsets: {props.heldPosition}");
     }
 
     void DropObject()

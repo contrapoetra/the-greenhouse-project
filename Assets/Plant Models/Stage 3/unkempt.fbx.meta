@@ -3,7 +3,42 @@ guid: f26343cc25ea35e83a2a8bc358d645b2
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Leaf_wild.001
+    second: {fileID: 2100000, guid: 29d19af508a6e191e8749d90185c1e54, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Material.002
+    second: {fileID: 2100000, guid: 04ff34a8c34e07274b98bbd4e7842747, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Petal_wild.001
+    second: {fileID: 2100000, guid: 2a21734e739a907129348ba27e0ce962, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: Stigma_wild.001
+    second: {fileID: 2100000, guid: 5e1e84156e61944fab417c01bc80bdbe, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: leaves
+    second: {fileID: 2100000, guid: 09ea055a8cf6a8892bf70be7860b4482, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: melon leaf
+    second: {fileID: 2100000, guid: b5d9896835506b1b192abfea4e17c638, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: potted_plant_02_leaves.001
+    second: {fileID: 2100000, guid: 3f14c0ed32c3376d8b26e0dea7cdc41d, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
