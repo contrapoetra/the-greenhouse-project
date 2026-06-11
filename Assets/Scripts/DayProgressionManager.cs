@@ -13,6 +13,7 @@ public class DayProgressionManager : MonoBehaviour
     [Header("── UI References ──")]
     public TextMeshProUGUI dayTitleText;
     public CanvasGroup transitionCanvasGroup;
+    public GameObject winPanel;
 
     [Header("── Game Objects ──")]
     public GameObject computerCollider;
@@ -42,6 +43,7 @@ public class DayProgressionManager : MonoBehaviour
 
     public int CurrentPlantedCount { get; private set; }
     public int CurrentWateredCount { get; private set; }
+    public int CurrentPollinatedCount { get; private set; }
 
     // --- Eye Memory ---
     private Transform _originalCameraParent;
@@ -97,6 +99,7 @@ public class DayProgressionManager : MonoBehaviour
         if (!_dayEndEnabled)
         {
             if (_currentDay == 0) CheckDay0Tasks();
+            else if (_currentDay == 3) CheckDay3Tasks();
             else CheckGenericWateringTasks();
         }
 
@@ -127,6 +130,29 @@ public class DayProgressionManager : MonoBehaviour
         foreach (var p in plants) if (p.waterLevel >= 1f) watered++;
         CurrentWateredCount = watered;
         if (CurrentPlantedCount >= requiredPlants && CurrentWateredCount >= CurrentPlantedCount) EnableDayEnd();
+    }
+
+    private void CheckDay3Tasks()
+    {
+        PlantGrowth[] plants = Object.FindObjectsByType<PlantGrowth>(FindObjectsSortMode.None);
+        
+        int watered = 0;
+        int pollinated = 0;
+        foreach (var p in plants)
+        {
+            if (p.waterLevel >= 1f) watered++;
+            if (p.isPollinated) pollinated++;
+        }
+        
+        CurrentWateredCount = watered;
+        CurrentPollinatedCount = pollinated;
+        CurrentPlantedCount = plants.Length;
+
+        // Require at least 5 pollinated plants AND all plants watered
+        if (pollinated >= 5 && watered >= plants.Length && plants.Length > 0)
+        {
+            EnableDayEnd();
+        }
     }
 
     private void CheckGenericWateringTasks()
@@ -225,6 +251,37 @@ public class DayProgressionManager : MonoBehaviour
         Debug.Log("TASKS DONE");
     }
 
+    public void TriggerWin()
+    {
+        StartCoroutine(WinTransition());
+    }
+
+    private IEnumerator WinTransition()
+    {
+        // 1. Fade to black
+        float elapsed = 0f;
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            float alpha = elapsed / fadeDuration;
+            if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = alpha;
+            yield return null;
+        }
+        if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 1f;
+
+        // 2. Show Win Panel
+        if (winPanel != null)
+        {
+            winPanel.SetActive(true);
+        }
+
+        // 3. Unlock cursor
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+
+        Debug.Log("Win Transition Complete.");
+    }
+
     private void ApplyNarrativeWeather(int day)
     {
         if (TimeWeatherManager.Instance == null) return;
@@ -238,14 +295,22 @@ public class DayProgressionManager : MonoBehaviour
         _currentDay = dayNumber;
         _dayEndEnabled = false;
 
-        if (dayTitleText != null) { dayTitleText.text = "Day " + _currentDay; dayTitleText.alpha = 1f; }
+        if (dayTitleText != null) 
+        { 
+            dayTitleText.text = "Day " + _currentDay; 
+            dayTitleText.alpha = 1f; 
+        }
+
+        if (transitionCanvasGroup != null)
+        {
+            // Ensure panel is visible at the very start of the transition (it should be 1 if coming from EndDayTransition)
+            // but we'll force it here just in case.
+            if (!instant) transitionCanvasGroup.alpha = 1f;
+        }
         
         if (instant)
         {
-            // Just a split second flash of the title for feedback
             yield return new WaitForSeconds(0.2f);
-            if (dayTitleText != null) dayTitleText.alpha = 0f;
-            if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 0f;
         }
         else
         {
@@ -261,6 +326,7 @@ public class DayProgressionManager : MonoBehaviour
             }
         }
 
+        // CRITICAL: Force absolute zero at the end
         if (transitionCanvasGroup != null) transitionCanvasGroup.alpha = 0f;
         if (dayTitleText != null) dayTitleText.alpha = 0f;
     }

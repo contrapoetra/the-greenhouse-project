@@ -588,7 +588,7 @@ MonoBehaviour:
       type: {class: DiffusionProfileDefaultSettings, ns: UnityEngine.Rendering.HighDefinition, asm: Unity.RenderPipelines.HighDefinition.Runtime}
       data:
         m_Version: 0
-        m_AutoRegisterDiffusionProfiles: 0
+        m_AutoRegisterDiffusionProfiles: 1
     - rid: 4882687498814750737
       type: {class: WaterSystemRuntimeResources, ns: UnityEngine.Rendering.HighDefinition, asm: Unity.RenderPipelines.HighDefinition.Runtime}
       data:

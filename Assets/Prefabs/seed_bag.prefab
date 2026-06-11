@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: -6856924431577150536}
   - component: {fileID: 6351187368015918226}
   - component: {fileID: 1422158819488874445}
+  - component: {fileID: -4723082764098753362}
   m_Layer: 0
   m_Name: seed_bag
   m_TagString: Untagged
@@ -97,12 +98,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CustomProperties
   originalScale: {x: 1, y: 1, z: 1}
+  isBeingHeld: 0
+  lastDropTime: 0
   properties:
   - pickup
   - seed
   heldPosition: {x: 0.62, y: -0.15, z: 0}
   heldRotation: {x: -3.26, y: 1, z: 26.8}
   heldScale: {x: 1, y: 1, z: 1}
+--- !u!114 &-4723082764098753362
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 153367987118202237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f4848b3bb95fdc2096470579df58aed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ItemCleanup
+  cleanupTime: 5
 --- !u!1001 &5080848129039486234
 PrefabInstance:
   m_ObjectHideFlags: 0

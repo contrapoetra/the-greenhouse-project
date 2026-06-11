@@ -29,6 +29,19 @@ public class ComputerTaskUI : MonoBehaviour
                 status += "\nTASKS COMPLETE. CLICK TO REPORT.";
             }
         }
+        else if (day == 3)
+        {
+            int polReq = 5;
+            int polCount = DayProgressionManager.Instance.CurrentPollinatedCount;
+            status = "DAY 3 - POLLINATION PHASE\n\n";
+            status += $"- Water Plants: {watered}/{planted} " + (watered >= planted ? "✔" : "") + "\n";
+            status += $"- Pollinate: {polCount}/{polReq} " + (polCount >= polReq ? "✔" : "") + "\n";
+            
+            if (DayProgressionManager.Instance.IsDayEndEnabled)
+            {
+                status += "\nTASKS COMPLETE. CLICK TO REPORT.";
+            }
+        }
         else
         {
             status = $"DAY {day} - MAINTENANCE\n\n";

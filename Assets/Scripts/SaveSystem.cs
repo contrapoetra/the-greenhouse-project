@@ -165,20 +165,27 @@ public class SaveSystem : MonoBehaviour
                     }
                 }
             }
+// 5. Restore Dirts
+CustomProperties[] allProps = Object.FindObjectsByType<CustomProperties>(FindObjectsSortMode.None);
+foreach (var dData in data.dirts)
+{
+    foreach (var prop in allProps)
+    {
+        if (Vector3.Distance(prop.transform.position, dData.position) < 0.1f)
+        {
+            List<string> pList = new List<string>(prop.properties);
+            if (dData.isFertilized && !pList.Contains("fertilized")) pList.Add("fertilized");
+            prop.properties = pList.ToArray();
 
-            CustomProperties[] allProps = Object.FindObjectsByType<CustomProperties>(FindObjectsSortMode.None);
-            foreach (var dData in data.dirts)
+            // Visual Indicator: Restore metallic/shiny look
+            if (dData.isFertilized)
             {
-                foreach (var prop in allProps)
-                {
-                    if (Vector3.Distance(prop.transform.position, dData.position) < 0.1f)
-                    {
-                        List<string> pList = new List<string>(prop.properties);
-                        if (dData.isFertilized && !pList.Contains("fertilized")) pList.Add("fertilized");
-                        prop.properties = pList.ToArray();
-                    }
-                }
+                Renderer rend = prop.GetComponent<Renderer>() ?? prop.GetComponentInChildren<Renderer>();
+                if (rend != null) rend.material.SetFloat("_Metallic", 1f);
             }
+        }
+    }
+}
             Debug.Log("[SaveSystem] Load Complete.");
         }
         catch (System.Exception e) { Debug.LogError($"[SaveSystem] LOAD FAILED: {e.Message}"); }

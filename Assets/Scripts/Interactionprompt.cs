@@ -137,9 +137,17 @@ public class InteractionPrompt : MonoBehaviour
             bool isSeed = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "seed");
             bool isWateringCan = heldProps != null && (System.Array.Exists(heldProps.properties, p => p == "watering_can") || held.name.Contains("watering_can"));
             bool isFertilizer = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "fertilizer");
+            bool isMelon = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "melon");
+
+            if (isMelon && targetProperties != null && System.Array.Exists(targetProperties, p => p == "bucket"))
+                return "[Klik Kanan]\nLepas di Ember";
 
             if (isFertilizer && targetProperties != null && System.Array.Exists(targetProperties, p => p == "dirt"))
-                return "[Klik Kiri] Beri Pupuk";
+            {
+                if (System.Array.Exists(targetProperties, p => p == "fertilized"))
+                    return "Sudah dipupuk";
+                return "[Klik Kiri]\nBeri Pupuk";
+            }
 
             if (isSeed && targetProperties != null && System.Array.Exists(targetProperties, p => p == "dirt"))
                 return "[Klik Kiri] Tanam Benih";
@@ -168,6 +176,15 @@ public class InteractionPrompt : MonoBehaviour
         if (System.Array.Exists(targetProperties, p => p == "planted"))
             return "[Klik Kiri] Periksa Tanaman";
 
+        if (System.Array.Exists(targetProperties, p => p == "melon_fruit"))
+        {
+            PlantGrowth pg = hitObj.GetComponentInParent<PlantGrowth>();
+            if (pg != null && pg.isFruitVisible)
+            {
+                return "[Klik Kiri] Panen Melon";
+            }
+        }
+
         if (System.Array.Exists(targetProperties, p => p == "male_flower"))
         {
             if (PollinationManager.Instance != null && PollinationManager.Instance.HasPollen)
@@ -177,8 +194,13 @@ public class InteractionPrompt : MonoBehaviour
 
         if (System.Array.Exists(targetProperties, p => p == "female_flower"))
         {
-            // Check if it's too late (Stage 6)
             PlantGrowth pg = hitObj.GetComponentInParent<PlantGrowth>();
+            
+            if (pg != null && pg.isPollinated)
+            {
+                return "Sudah diserbuki";
+            }
+
             if (pg != null && pg.currentStage == 6)
             {
                 return "Bunga sudah layu";
@@ -199,7 +221,11 @@ public class InteractionPrompt : MonoBehaviour
     void ShowPrompt(string text)
     {
         if (promptPanel != null) promptPanel.SetActive(true);
-        if (promptText  != null) promptText.text = text;
+        if (promptText  != null) 
+        {
+            string formatted = text.Replace("] ", "]\n");
+            promptText.text = formatted;
+        }
     }
 
     void HidePrompt()

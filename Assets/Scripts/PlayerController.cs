@@ -22,6 +22,7 @@ public class PlayerController : MonoBehaviour
     public float scrollSensitivity = 5f;
     private float _defaultFOV;
     private float _currentZoomTarget = 30f;
+    private bool _canZoom = false;
 
     void Awake()
     {
@@ -86,11 +87,22 @@ public class PlayerController : MonoBehaviour
     {
         if (Camera.main == null) return;
 
-        // Condition: Right Click is held, AND holding nothing, AND not viewing computer tasks
         bool isHoldingNothing = ClickEvent.Instance != null && ClickEvent.Instance.GetHeldItemType() == "none";
         bool isViewingComputer = DayProgressionManager.Instance != null && DayProgressionManager.Instance.IsViewingTasks;
 
-        if (Input.GetMouseButton(1) && isHoldingNothing && !isViewingComputer)
+        // Start of click: Only allow zoom if we were holding NOTHING at the start of the RMB press
+        if (Input.GetMouseButtonDown(1))
+        {
+            _canZoom = isHoldingNothing && !isViewingComputer;
+        }
+
+        // Reset flag on release
+        if (Input.GetMouseButtonUp(1))
+        {
+            _canZoom = false;
+        }
+
+        if (Input.GetMouseButton(1) && _canZoom)
         {
             // Scroll to adjust zoom target
             float scroll = Input.GetAxis("Mouse ScrollWheel");

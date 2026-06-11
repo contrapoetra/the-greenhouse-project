@@ -2,8 +2,10 @@ using UnityEngine;
 
 public class CustomProperties : MonoBehaviour
 {
-    [Header("Original State (Auto-filled)")]
+    [Header("Held State (Auto-filled)")]
     public Vector3 originalScale = Vector3.one;
+    public bool isBeingHeld = false;
+    public float lastDropTime = 0f;
 
     public string[] properties;
 

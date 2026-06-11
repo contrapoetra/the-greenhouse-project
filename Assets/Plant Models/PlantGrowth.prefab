@@ -1293,6 +1293,80 @@ MonoBehaviour:
   heldPosition: {x: 0, y: 0, z: 0}
   heldRotation: {x: 0, y: 0, z: 0}
   heldScale: {x: 1, y: 1, z: 1}
+--- !u!1 &5088548629716020882
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3898960082964430480}
+  - component: {fileID: 9197835208117830935}
+  - component: {fileID: 337464672409315670}
+  m_Layer: 0
+  m_Name: Melon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3898960082964430480
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5088548629716020882}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.00131, y: -0.00223, z: 0.0046}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 668444201853831849}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &9197835208117830935
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5088548629716020882}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.0012017798
+  m_Height: 0.002563077
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.000000019073486, z: 1.2959605e-21}
+--- !u!114 &337464672409315670
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5088548629716020882}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1819074559e65bbed91dc7e2c1c624fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomProperties
+  originalScale: {x: 1, y: 1, z: 1}
+  properties:
+  - melon_fruit
+  heldPosition: {x: 0, y: 0, z: 0}
+  heldRotation: {x: 0, y: 0, z: 0}
+  heldScale: {x: 1, y: 1, z: 1}
 --- !u!1 &6174900967119787100
 GameObject:
   m_ObjectHideFlags: 0
@@ -1924,6 +1998,80 @@ CapsuleCollider:
   m_Height: 0.0034564282
   m_Direction: 1
   m_Center: {x: 0.00067237037, y: 0.0003620313, z: 1.3006043e-10}
+--- !u!1 &8567851368059667152
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4012778572426250462}
+  - component: {fileID: 1555554644004961493}
+  - component: {fileID: 8120804571046193483}
+  m_Layer: 0
+  m_Name: Melon
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4012778572426250462
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8567851368059667152}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: 0.000000029802326, z: -0.26599935, w: 0.9639732}
+  m_LocalPosition: {x: -0.00321, y: 0.00034, z: -0.00015}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 572958351476290420}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -30.853}
+--- !u!136 &1555554644004961493
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8567851368059667152}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.0012465344
+  m_Height: 0.0025698978
+  m_Direction: 1
+  m_Center: {x: 4.610246e-16, y: 0.000000019073488, z: 1.4060323e-21}
+--- !u!114 &8120804571046193483
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8567851368059667152}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1819074559e65bbed91dc7e2c1c624fe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CustomProperties
+  originalScale: {x: 1, y: 1, z: 1}
+  properties:
+  - melon_fruit
+  heldPosition: {x: 0, y: 0, z: 0}
+  heldRotation: {x: 0, y: 0, z: 0}
+  heldScale: {x: 1, y: 1, z: 1}
 --- !u!1 &8802251124535283757
 GameObject:
   m_ObjectHideFlags: 0
@@ -2272,6 +2420,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82d6c08e900a067cdb30523d8af9b5fd, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2502849078074703450}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 82d6c08e900a067cdb30523d8af9b5fd, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4012778572426250462}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 82d6c08e900a067cdb30523d8af9b5fd, type: 3}
 --- !u!4 &572958351476290420 stripped
@@ -2860,6 +3011,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3b82fb843fb8fda63b819010eb746b24, type: 3}
       insertIndex: -1
       addedObject: {fileID: 5715032133182205009}
+    - targetCorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3b82fb843fb8fda63b819010eb746b24, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3898960082964430480}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 3b82fb843fb8fda63b819010eb746b24, type: 3}
 --- !u!4 &668444201853831849 stripped

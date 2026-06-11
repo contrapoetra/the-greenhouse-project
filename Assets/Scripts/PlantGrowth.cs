@@ -18,7 +18,7 @@ public class PlantGrowth : MonoBehaviour
     public float waterLevel = 0f;
     public bool isFruitVisible = false; // Whether fruit is actually shown
 
-    private float _growthTracker = 0f; 
+    private float _growthTracker = 0f;
     private int _pollinationCycles = 0; // Growth cycles completed since pollination
 
     public bool isWatered => waterLevel > 0.5f;
@@ -98,6 +98,14 @@ public class PlantGrowth : MonoBehaviour
         }
     }
 
+    public void Harvest()
+    {
+        isFruitVisible = false;
+        isPollinated = false; // Reset pollination so it can bear fruit again
+        _pollinationCycles = 0;
+        UpdateVisuals();
+    }
+
     public void UpdateVisuals()
     {
         for (int i = 0; i < stageParents.Length; i++)
@@ -141,9 +149,9 @@ public class PlantGrowth : MonoBehaviour
         this._growthTracker = data.growthTracker;
         this._pollinationCycles = data.pollinationCycles;
         this.isFruitVisible = data.isFruitVisible;
-        
+
         Debug.Log($"[PlantGrowth] Loaded: Stage {currentStage}, TiedUp: {isTiedUp}, FruitVisible: {isFruitVisible}");
-        
+
         UpdateVisuals();
     }
 }

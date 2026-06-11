@@ -14,16 +14,19 @@ public class ClickEvent : MonoBehaviour
     public Transform cameraTransform;
     public Transform holdPoint;
     public float range = 100f;
+    public float throwForce = 2f; // Tiny push forward
 
     public GameObject seedPrefab;
     public GameObject fertilizerPrefab;
     public GameObject plantPrefab;
     public GameObject wateringCanPrefab;
+    public GameObject melonPrefab; // Added for harvesting
 
     GameObject heldObject;
     int heldUses = 0;
 
     public bool IsHoldingWateringCan { get; private set; }
+    public bool IsHoldingMelon { get; private set; }
 
     // --- Save System Helpers ---
     public string GetHeldItemType()
@@ -33,6 +36,7 @@ public class ClickEvent : MonoBehaviour
         if (props == null) return "none";
         if (System.Array.Exists(props.properties, p => p == "seed")) return "seed";
         if (System.Array.Exists(props.properties, p => p == "fertilizer")) return "fertilizer";
+        if (System.Array.Exists(props.properties, p => p == "melon")) return "melon";
         if (System.Array.Exists(props.properties, p => p == "watering_can") || heldObject.name.Contains("watering_can")) return "watering_can";
         return "none";
     }
@@ -44,6 +48,7 @@ public class ClickEvent : MonoBehaviour
         if (type == "none") return;
         if (type == "seed") SpawnItem(seedPrefab, uses, "seed");
         else if (type == "fertilizer") SpawnItem(fertilizerPrefab, uses, "fertilizer");
+        else if (type == "melon") PickupObject(Instantiate(melonPrefab));
         else if (type == "watering_can") PickupObject(Instantiate(wateringCanPrefab));
     }
 
@@ -54,13 +59,20 @@ public class ClickEvent : MonoBehaviour
 
     void Update()
     {
+        // Check states for UI visibility
         IsHoldingWateringCan = false;
+        IsHoldingMelon = false;
+
         if (heldObject != null)
         {
             CustomProperties heldProps = heldObject.GetComponentInChildren<CustomProperties>();
-            if (heldProps != null && (System.Array.Exists(heldProps.properties, p => p == "watering_can") || heldObject.name.Contains("watering_can")))
+            if (heldProps != null)
             {
-                IsHoldingWateringCan = true;
+                if (System.Array.Exists(heldProps.properties, p => p == "watering_can") || heldObject.name.Contains("watering_can"))
+                    IsHoldingWateringCan = true;
+                
+                if (heldProps.properties != null && System.Array.Exists(heldProps.properties, p => p == "melon"))
+                    IsHoldingMelon = true;
             }
         }
 
@@ -72,6 +84,13 @@ public class ClickEvent : MonoBehaviour
                 PlantGrowth plant = hit.collider.GetComponentInParent<PlantGrowth>();
                 if (plant != null) plant.TieUp();
             }
+        }
+
+        // Debug Key M: Spawn a melon instantly in hand
+        if (Input.GetKeyDown(KeyCode.M))
+        {
+            Debug.Log("Debug: Spawning melon instantly via M key");
+            SpawnItem(melonPrefab, 1, "melon");
         }
 
         if (heldObject != null)
@@ -116,20 +135,27 @@ public class ClickEvent : MonoBehaviour
                 CustomProperties heldProps = heldObject.GetComponentInChildren<CustomProperties>();
                 bool isSeed = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "seed");
                 bool isFertilizer = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "fertilizer");
+                bool isMelon = heldProps != null && System.Array.Exists(heldProps.properties, p => p == "melon");
 
                 if (didHit)
                 {
                     CustomProperties hitProps = hit.collider.GetComponentInParent<CustomProperties>();
                     bool isDirt = hitProps != null && System.Array.Exists(hitProps.properties, p => p == "dirt");
+                    bool isBucket = hitProps != null && System.Array.Exists(hitProps.properties, p => p == "bucket");
+if (isFertilizer && isDirt)
+{
+    if (!System.Array.Exists(hitProps.properties, p => p == "fertilized"))
+    {
+        Debug.Log("Soil fertilized");
+        System.Collections.Generic.List<string> pList = new System.Collections.Generic.List<string>(hitProps.properties);
+        pList.Add("fertilized");
+        hitProps.properties = pList.ToArray();
 
-                    if (isFertilizer && isDirt)
-                    {
-                        if (!System.Array.Exists(hitProps.properties, p => p == "fertilized"))
-                        {
-                            System.Collections.Generic.List<string> pList = new System.Collections.Generic.List<string>(hitProps.properties);
-                            pList.Add("fertilized");
-                            hitProps.properties = pList.ToArray();
-                            heldUses--;
+        // Visual Indicator: Make it metallic/shiny
+        Renderer rend = hit.collider.GetComponent<Renderer>() ?? hit.collider.GetComponentInChildren<Renderer>();
+        if (rend != null) rend.material.SetFloat("_Metallic", 1f);
+
+        heldUses--;
                             ItemData data = heldObject.GetComponentInChildren<ItemData>();
                             if (data != null) data.uses = heldUses;
                             if (heldUses <= 0) { Destroy(heldObject); heldObject = null; }
@@ -157,6 +183,19 @@ public class ClickEvent : MonoBehaviour
                 CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
                 if (props != null && props.properties != null)
                 {
+                    if (System.Array.Exists(props.properties, p => p == "melon_fruit"))
+                    {
+                        PlantGrowth plant = hit.collider.GetComponentInParent<PlantGrowth>();
+                        if (plant != null && plant.isFruitVisible)
+                        {
+                            Debug.Log("Harvesting Melon");
+                            plant.Harvest();
+                            // Use SpawnItem to ensure the "melon" tag is added
+                            SpawnItem(melonPrefab, 1, "melon");
+                        }
+                        return;
+                    }
+
                     if (System.Array.Exists(props.properties, p => p == "male_flower"))
                     {
                         PollinationManager.Instance.OnFlowerClicked(hit.collider.gameObject, "male_flower");
@@ -178,9 +217,6 @@ public class ClickEvent : MonoBehaviour
         if (Input.GetMouseButtonDown(1) && heldObject != null) DropObject();
     }
 
-    /// <summary>
-    /// Uses RaycastAll to find specific interactables (like flowers) even if blocked by general plant colliders.
-    /// </summary>
     public bool GetPrioritizedHit(out RaycastHit bestHit)
     {
         Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
@@ -189,16 +225,15 @@ public class ClickEvent : MonoBehaviour
 
         if (hits.Length == 0) return false;
 
-        // 1. Sort by distance
         var sortedHits = hits.OrderBy(h => h.distance).ToList();
 
-        // 2. Try to find HIGH PRIORITY targets (flowers) first, anywhere in the line
         foreach (var hit in sortedHits)
         {
             CustomProperties props = hit.collider.GetComponentInParent<CustomProperties>();
             if (props != null && props.properties != null)
             {
-                if (System.Array.Exists(props.properties, p => p == "male_flower") || 
+                if (System.Array.Exists(props.properties, p => p == "melon_fruit") ||
+                    System.Array.Exists(props.properties, p => p == "male_flower") || 
                     System.Array.Exists(props.properties, p => p == "female_flower"))
                 {
                     bestHit = hit;
@@ -207,7 +242,6 @@ public class ClickEvent : MonoBehaviour
             }
         }
 
-        // 3. Fallback to the very first thing we hit
         bestHit = sortedHits[0];
         return true;
     }
@@ -293,10 +327,16 @@ public class ClickEvent : MonoBehaviour
     {
         foreach (Rigidbody rb in obj.GetComponentsInChildren<Rigidbody>())
         {
+            // Zero out velocity BEFORE setting kinematic
+            if (!rb.isKinematic)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
+
             rb.isKinematic = true;
             rb.useGravity = false;
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
+            
             rb.transform.localPosition = Vector3.zero;
             rb.transform.localRotation = Quaternion.identity;
         }
@@ -309,6 +349,8 @@ public class ClickEvent : MonoBehaviour
         CustomProperties props = obj.GetComponentInChildren<CustomProperties>();
         if (props == null) props = obj.AddComponent<CustomProperties>();
         
+        props.isBeingHeld = true;
+
         if (props.originalScale == Vector3.one || props.originalScale == Vector3.zero)
         {
             props.originalScale = obj.transform.localScale;
@@ -326,12 +368,20 @@ public class ClickEvent : MonoBehaviour
 
         heldObject.transform.SetParent(null);
         CustomProperties props = heldObject.GetComponentInChildren<CustomProperties>();
-        if (props != null) heldObject.transform.localScale = props.originalScale;
+        if (props != null)
+        {
+            heldObject.transform.localScale = props.originalScale;
+            props.isBeingHeld = false;
+            props.lastDropTime = Time.time;
+        }
 
         foreach (Rigidbody rb in heldObject.GetComponentsInChildren<Rigidbody>())
         {
             rb.isKinematic = false;
             rb.useGravity = true;
+
+            // Tiny push forward based on camera direction
+            rb.AddForce(cameraTransform.forward * throwForce, ForceMode.Impulse);
         }
 
         foreach (Collider col in heldObject.GetComponentsInChildren<Collider>())
