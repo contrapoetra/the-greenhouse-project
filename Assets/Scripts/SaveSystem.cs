@@ -193,6 +193,21 @@ foreach (var dData in data.dirts)
 
     public void DeleteSave()
     {
-        if (SaveFileExists()) File.Delete(savePath);
+        if (SaveFileExists())
+        {
+            try
+            {
+                File.Delete(savePath);
+                Debug.Log($"[SaveSystem] Save file deleted successfully from: {savePath}");
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogError($"[SaveSystem] FAILED to delete save file: {e.Message}");
+            }
+        }
+        else
+        {
+            Debug.Log("[SaveSystem] DeleteSave called, but no file existed.");
+        }
     }
 }

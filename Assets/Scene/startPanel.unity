@@ -3956,6 +3956,7 @@ MonoBehaviour:
   PanelMainMenuSavedGame: {fileID: 2122160745}
   PanelSetting: {fileID: 469310886}
   PanelTutorial: {fileID: 63583928}
+  resumeDayText: {fileID: 109736775}
 --- !u!4 &1103628424
 Transform:
   m_ObjectHideFlags: 0

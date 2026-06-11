@@ -282,6 +282,20 @@ public class DayProgressionManager : MonoBehaviour
         Debug.Log("Win Transition Complete.");
     }
 
+    public void ResetAndExitToMainMenu()
+    {
+        Debug.Log("[DayProgression] Finalizing game: Deleting save and exiting...");
+        if (SaveSystem.Instance != null)
+        {
+            SaveSystem.Instance.DeleteSave();
+        }
+        else
+        {
+            Debug.LogWarning("[DayProgression] SaveSystem.Instance is NULL during exit!");
+        }
+        UnityEngine.SceneManagement.SceneManager.LoadScene("startPanel");
+    }
+
     private void ApplyNarrativeWeather(int day)
     {
         if (TimeWeatherManager.Instance == null) return;
@@ -352,10 +366,29 @@ public class DayProgressionManager : MonoBehaviour
         
         // 1. Progression
         _currentDay++;
-        if (PlantManager.Instance != null)
+
+        // --- Environmental Effects on Plants ---
+        float evaporationRate = 0.2f; // Base 20%
+        if (EnvironmentManager.Instance != null)
         {
-            PlantManager.Instance.GrowAllPlants(isInstant);
+            // Lower humidity = Higher evaporation
+            // High humidity (80%+) = Almost 0 evaporation
+            float humidityFactor = 1f - (EnvironmentManager.Instance.Humidity / 100f);
+            evaporationRate = Mathf.Lerp(0.05f, 0.5f, humidityFactor);
         }
+
+        PlantGrowth[] allPlants = Object.FindObjectsByType<PlantGrowth>(FindObjectsSortMode.None);
+        foreach (var p in allPlants)
+        {
+            // Apply evaporation
+            p.Evaporate(evaporationRate);
+            
+            // Advance growth stage
+            p.ProgressStage(isInstant);
+        }
+
+        // We no longer call PlantManager.Instance.GrowAllPlants(isInstant) here
+        // as we handled the individual growth steps above.
 
         // 2. Weather
         ApplyNarrativeWeather(_currentDay);

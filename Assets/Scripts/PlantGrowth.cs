@@ -45,6 +45,15 @@ public class PlantGrowth : MonoBehaviour
         Debug.Log($"Plant watered. Current level: {waterLevel}");
     }
 
+    /// <summary>
+    /// Reduces water level based on environmental factors (evaporation).
+    /// </summary>
+    public void Evaporate(float amount)
+    {
+        waterLevel = Mathf.Max(waterLevel - amount, 0f);
+        Debug.Log($"Plant evaporated. Current level: {waterLevel}");
+    }
+
     public void ProgressStage(bool force = false)
     {
         // Require water for growth (unless forced via debug)
@@ -76,14 +85,18 @@ public class PlantGrowth : MonoBehaviour
             {
                 currentStage++;
                 _growthTracker = 0f;
-                waterLevel = 0f;
+                
+                // CONSUME: Only take a bit of water for the growth burst (20%)
+                waterLevel = Mathf.Max(waterLevel - 0.2f, 0f); 
+                
                 UpdateVisuals();
                 Debug.Log($"Plant grew to stage {currentStage}");
             }
         }
         else
         {
-            waterLevel = 0f;
+            // MAINTENANCE: Consuming a tiny bit of water to stay alive (10%)
+            waterLevel = Mathf.Max(waterLevel - 0.1f, 0f);
             Debug.Log("Plant is growing...");
         }
     }

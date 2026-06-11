@@ -16,6 +16,10 @@ public class MainMenuLogic : MonoBehaviour
     public GameObject PanelSetting;
     public GameObject PanelTutorial;
 
+    [Header("── UI Elements ──")]
+    [Tooltip("Text showing which day the player will resume on")]
+    public TMPro.TextMeshProUGUI resumeDayText;
+
     void Start()
     {
         BackMainMenu(); // Initialize UI state
@@ -24,9 +28,53 @@ public class MainMenuLogic : MonoBehaviour
     public void CheckSaveFile()
     {
         bool hasSave = SaveSystem.Instance != null && SaveSystem.Instance.SaveFileExists();
+        Debug.Log($"[MainMenu] Save detection: {hasSave} (Instance valid: {SaveSystem.Instance != null})");
         
+        if (hasSave && resumeDayText != null)
+        {
+            UpdateResumeInfo();
+        }
+
         if (PanelMainMenu != null) PanelMainMenu.SetActive(!hasSave);
         if (PanelMainMenuSavedGame != null) PanelMainMenuSavedGame.SetActive(hasSave);
+    }
+
+    private void UpdateResumeInfo()
+    {
+        try
+        {
+            string savePath = System.IO.Path.Combine(Application.persistentDataPath, "melon_save.json");
+            if (System.IO.File.Exists(savePath))
+            {
+                string json = System.IO.File.ReadAllText(savePath);
+                GameSaveData data = JsonUtility.FromJson<GameSaveData>(json);
+                
+                if (data.currentDay > 6)
+                {
+                    resumeDayText.text = "It's been a while";
+                }
+                else
+                {
+                    string dayWord = data.currentDay switch
+                    {
+                        0 => "Zero",
+                        1 => "One",
+                        2 => "Two",
+                        3 => "Three",
+                        4 => "Four",
+                        5 => "Five",
+                        6 => "Six",
+                        _ => data.currentDay.ToString()
+                    };
+                    resumeDayText.text = "Day " + dayWord;
+                }
+            }
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"[MainMenu] Failed to read save info: {e.Message}");
+            resumeDayText.text = "";
+        }
     }
 
     private void HideAllMenus()
@@ -82,4 +130,3 @@ public class MainMenuLogic : MonoBehaviour
 #endif
 }
 }
-

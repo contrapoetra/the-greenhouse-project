@@ -7,7 +7,7 @@ using TMPro;
 public class ComputerTaskUI : MonoBehaviour
 {
     public TextMeshProUGUI taskListText;
-    
+
     void Update()
     {
         if (taskListText == null || DayProgressionManager.Instance == null) return;
@@ -23,7 +23,7 @@ public class ComputerTaskUI : MonoBehaviour
             status = "DAY 0 - INITIAL PLANTING\n\n";
             status += $"- Plant Seeds: {planted}/{req} " + (planted >= req ? "✔" : "") + "\n";
             status += $"- Water Plants: {watered}/{planted} " + (watered >= planted && planted >= req ? "✔" : "") + "\n";
-            
+
             if (DayProgressionManager.Instance.IsDayEndEnabled)
             {
                 status += "\nTASKS COMPLETE. CLICK TO REPORT.";
@@ -36,10 +36,22 @@ public class ComputerTaskUI : MonoBehaviour
             status = "DAY 3 - POLLINATION PHASE\n\n";
             status += $"- Water Plants: {watered}/{planted} " + (watered >= planted ? "✔" : "") + "\n";
             status += $"- Pollinate: {polCount}/{polReq} " + (polCount >= polReq ? "✔" : "") + "\n";
-            
+
             if (DayProgressionManager.Instance.IsDayEndEnabled)
             {
                 status += "\nTASKS COMPLETE. CLICK TO REPORT.";
+            }
+        }
+        else if (day >= 6)
+        {
+            status = $"DAY {day} - HARVEST DAY!\n\n";
+            status += $"- Water Plants: {watered}/{planted} " + (watered >= planted ? "✔" : "") + "\n";
+            status += "- Harvest Melons!\n";
+            status += "- Fill the Bucket to win.";
+
+            if (DayProgressionManager.Instance.IsDayEndEnabled)
+            {
+                status += "\n\nTASKS COMPLETE. CLICK TO REPORT.";
             }
         }
         else
